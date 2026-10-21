@@ -6,7 +6,7 @@ from sqlalchemy import inspect, text
 
 from app.database import Base, engine, SessionLocal
 from app.models.models import Post, User, Category
-from app.auth import hash_password
+from app.auth import hash_password, verify_password
 from app.routers import posts, contact, auth, settings, uploads, categories, comments, newsletter
 from app.seed_content import (
     NEURAL_NETWORK,
@@ -99,6 +99,14 @@ def seed_admin():
     try:
         existing = db.query(User).filter(User.email == ADMIN_EMAIL).first()
         if existing:
+            # Keep the admin's password in sync with ADMIN_PASSWORD every
+            # deploy — previously this function only ran once, on first
+            # creation, so changing ADMIN_PASSWORD in Render's dashboard
+            # later had no effect on an already-seeded account.
+            if not verify_password(ADMIN_PASSWORD, existing.hashed_password):
+                existing.hashed_password = hash_password(ADMIN_PASSWORD)
+                existing.is_admin = 1
+                db.commit()
             return
         admin = User(
             email=ADMIN_EMAIL,
