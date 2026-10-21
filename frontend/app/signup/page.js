@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { readerSignup } from "../../lib/readerAuth";
 import GoogleSignInButton from "../../components/GoogleSignInButton";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -94,5 +94,13 @@ export default function SignupPage() {
         <Link href="/login" className="font-semibold text-accent">Log in</Link>
       </p>
     </section>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   );
 }
