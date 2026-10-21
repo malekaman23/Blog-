@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getReaderUser, readerFetch } from "../lib/readerAuth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function CommentSection({ slug }) {
+  const router = useRouter();
   const [comments, setComments] = useState([]);
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("idle");
@@ -24,6 +25,12 @@ export default function CommentSection({ slug }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    // Not logged in — send them to log in instead of letting the post fail,
+    // and bring them straight back to this article afterward.
+    if (!user) {
+      router.push(`/login?redirect=/blog/${slug}`);
+      return;
+    }
     setStatus("sending");
     try {
       const res = await readerFetch("/api/comments", {
@@ -62,7 +69,7 @@ export default function CommentSection({ slug }) {
         </p>
       ) : user === undefined ? (
         <p className="text-sm text-muted">Checking login…</p>
-      ) : user ? (
+      ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <textarea
             placeholder="Your comment"
@@ -81,19 +88,6 @@ export default function CommentSection({ slug }) {
           </button>
           {status === "error" && <p className="text-sm text-red-700">Something went wrong — try again.</p>}
         </form>
-      ) : (
-        <div className="border border-line rounded-lg p-5 bg-paper2">
-          <p className="text-sm text-ink900">
-            <Link href={`/login?redirect=/blog/${slug}`} className="font-semibold text-accent">
-              Log in
-            </Link>{" "}
-            or{" "}
-            <Link href={`/signup?redirect=/blog/${slug}`} className="font-semibold text-accent">
-              create an account
-            </Link>{" "}
-            to leave a comment. Reading the article is always free — this is only needed to comment.
-          </p>
-        </div>
       )}
     </section>
   );

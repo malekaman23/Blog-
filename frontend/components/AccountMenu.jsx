@@ -89,9 +89,6 @@ export default function AccountMenu() {
                 >
                   Sign up
                 </Link>
-                <p className="px-4 pt-1 pb-2.5 text-xs" style={{ color: "#8A8F99" }}>
-                  Only needed to comment — reading is always free.
-                </p>
               </div>
             )}
           </div>
