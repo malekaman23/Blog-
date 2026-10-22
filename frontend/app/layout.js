@@ -13,10 +13,26 @@ function resolveUrl(url) {
   return url.startsWith("http") ? url : `${API_URL}${url}`;
 }
 
+// Settings come from our own backend, which can be slow to wake up (free
+// hosting tiers spin down when idle) or briefly unreachable. Never let that
+// block a page load or a build — give it a few seconds, then fall back to
+// defaults instead of hanging.
+function withTimeout(promise, ms = 5000) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]).catch(() => null);
+}
+
+// Pages here pull live data from our backend (settings, posts, categories),
+// so they're rendered per-request rather than baked in at build time — that
+// also means a deploy never has to wait on the backend being reachable.
+export const dynamic = "force-dynamic";
+
 // Dynamic so the admin-uploaded logo (Settings page) becomes the browser tab
 // favicon everywhere, without needing a code change/redeploy.
 export async function generateMetadata() {
-  const settings = await getSettings().catch(() => null);
+  const settings = await withTimeout(getSettings());
   const logoUrl = resolveUrl(settings?.logo_url);
 
   return {

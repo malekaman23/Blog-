@@ -7,10 +7,19 @@ function resolveUrl(url) {
   return url.startsWith("http") ? url : `${API_URL}${url}`;
 }
 
+// Same reasoning as app/layout.js — never let a slow/unreachable backend
+// block this (it runs at build time too), fall back to defaults instead.
+function withTimeout(promise, ms = 5000) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]).catch(() => null);
+}
+
 // Dynamic so the admin-uploaded logo (Settings page) is also used as the
 // app icon if someone installs the site (e.g. pinned to a taskbar/home screen).
 export default async function manifest() {
-  const settings = await getSettings().catch(() => null);
+  const settings = await withTimeout(getSettings());
   const logoUrl = resolveUrl(settings?.logo_url) || "/icon.png";
   const siteName = settings?.site_name || "Compound & Compile";
 
