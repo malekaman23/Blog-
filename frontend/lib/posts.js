@@ -1,5 +1,20 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Our backend can be slow to wake up (free hosting tiers spin down when
+// idle) or briefly unreachable. A plain fetch() can hang indefinitely in
+// that case — it only fails on an actual error, not on silence — which can
+// block a page render or, worse, a Vercel build. Give every call here a
+// hard ceiling, then fall through to the sample/fallback data.
+async function fetchWithTimeout(url, options = {}, ms = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 const SAMPLE_POSTS = [
   {
     slug: "inside-a-neural-network",
@@ -35,7 +50,7 @@ const SAMPLE_POSTS = [
 
 export async function getPosts() {
   try {
-    const res = await fetch(`${API_URL}/api/posts`, { next: { revalidate: 60 } });
+    const res = await fetchWithTimeout(`${API_URL}/api/posts`, { next: { revalidate: 60 } });
     if (!res.ok) throw new Error("Backend not available");
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) return data;
@@ -47,7 +62,7 @@ export async function getPosts() {
 
 export async function getPostBySlug(slug) {
   try {
-    const res = await fetch(`${API_URL}/api/posts/${slug}`, { next: { revalidate: 60 } });
+    const res = await fetchWithTimeout(`${API_URL}/api/posts/${slug}`, { next: { revalidate: 60 } });
     if (!res.ok) throw new Error("Not found on backend");
     return await res.json();
   } catch {
