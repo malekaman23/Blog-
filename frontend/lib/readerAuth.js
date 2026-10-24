@@ -15,16 +15,41 @@ export function getReaderToken() {
   }
 }
 
+const READER_USER_KEY = "reader_user";
+export const READER_AUTH_EVENT = "reader-auth-changed";
+
+function notifyAuthChanged() {
+  try {
+    window.dispatchEvent(new Event(READER_AUTH_EVENT));
+  } catch {}
+}
+
 function setReaderToken(token) {
   try {
     localStorage.setItem(READER_TOKEN_KEY, token);
+    localStorage.removeItem(READER_USER_KEY); // stale profile from a previous account
   } catch {}
+  notifyAuthChanged();
 }
 
 export function readerLogout() {
   try {
     localStorage.removeItem(READER_TOKEN_KEY);
+    localStorage.removeItem(READER_USER_KEY);
   } catch {}
+  notifyAuthChanged();
+}
+
+// Last known profile, so the menu can show the email instantly instead of
+// waiting on the (possibly sleeping) backend.
+export function getCachedReaderUser() {
+  if (!getReaderToken()) return null;
+  try {
+    const raw = localStorage.getItem(READER_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function readerSignup({ email, password, name }) {
@@ -79,7 +104,11 @@ export async function getReaderUser() {
       if (res.status === 401) readerLogout();
       return null;
     }
-    return res.json();
+    const user = await res.json();
+    try {
+      localStorage.setItem(READER_USER_KEY, JSON.stringify(user));
+    } catch {}
+    return user;
   } catch {
     return null;
   }

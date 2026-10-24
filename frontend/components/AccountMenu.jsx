@@ -2,14 +2,42 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getReaderUser, readerLogout } from "../lib/readerAuth";
+import {
+  getReaderUser,
+  getCachedReaderUser,
+  getReaderToken,
+  readerLogout,
+  READER_AUTH_EVENT,
+} from "../lib/readerAuth";
 
 export default function AccountMenu() {
   const [user, setUser] = useState(undefined); // undefined = checking, null = logged out
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    getReaderUser().then(setUser);
+    function refresh() {
+      if (!getReaderToken()) {
+        setUser(null);
+        return;
+      }
+      // Show the last known profile immediately, then confirm with the server.
+      const cached = getCachedReaderUser();
+      if (cached) setUser(cached);
+      getReaderUser().then((u) => {
+        // Keep the cached profile if the backend is just slow/unreachable.
+        if (u || !getReaderToken()) setUser(u);
+        else if (!cached) setUser(null);
+      });
+    }
+    refresh();
+    // The navbar stays mounted across page changes, so it must hear about
+    // login/logout instead of only checking once on first load.
+    window.addEventListener(READER_AUTH_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(READER_AUTH_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
 
   return (
