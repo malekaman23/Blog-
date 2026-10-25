@@ -30,3 +30,5 @@ export async function getCategories() {
     return DEFAULT_CATEGORIES;
   }
 }
+
+
